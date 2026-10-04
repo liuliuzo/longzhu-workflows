@@ -1,0 +1,27 @@
+# Jenkins 需要的插件（ID）。Manage Jenkins -> Plugins -> Available plugins 逐个搜索安装。
+# 安装向导里选过「Install suggested plugins」的话，多数已经装好。
+
+workflow-aggregator
+# Pipeline 全家桶（Declarative Pipeline 等）
+
+pipeline-groovy-lib
+# 共享库（旧名 workflow-cps-global-lib）。加载 @Library('longzhu') 必需
+
+git
+# 从 GitHub 读 Jenkinsfile 与产品仓 sql/
+
+credentials-binding
+# withCredentials：注入 SSH 账号、主机清单、GitHub PAT、数据库账号
+
+plain-credentials
+# Secret file 凭据类型（主机清单 longzhu-<env>-hosts）
+
+cloudbees-folder
+# 文件夹（longzhu/）
+
+timestamper
+# 日志时间戳（Jenkinsfile 里的 timestamps()）
+
+# Jenkins agent 上还要有这些命令：bash、git、sshpass、ssh / scp、python3（跑 jobs.py 时）、
+# mysql 客户端（只有 init database Job 需要）。Debian / Ubuntu：
+#   apt-get install -y git sshpass openssh-client python3 default-mysql-client
