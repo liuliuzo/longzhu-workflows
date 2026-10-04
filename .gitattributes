@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.groovy text eol=lf
+Jenkinsfile* text eol=lf
+# 主机清单模板会被上传成 Jenkins Secret file 并在 Linux 上 source，必须保持 LF。
+*.env.example text eol=lf

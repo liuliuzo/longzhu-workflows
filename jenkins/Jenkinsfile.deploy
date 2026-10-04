@@ -1,0 +1,59 @@
+// 部署流水线。所有产品共用这一份，产品与环境由 Job 内部名决定：
+//   dev-longzhu-deploy  →  开发环境部署龙珠车服两端（界面显示 longzhu deploy(dev)）
+//
+// 仅手动触发，点 Build 即执行；target 不改就是两端（先用户端、后管理端）。
+// 目标机自己拉 develop、就地构建、替换、重启、健康检查；健康检查失败自动回滚到上一版。
+// 部署失败不自动重跑、不自动重新部署。
+@Library('longzhu') _
+
+pipeline {
+  agent any
+
+  options {
+    skipDefaultCheckout()
+    disableConcurrentBuilds()
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    timeout(time: 120, unit: 'MINUTES')
+  }
+
+  parameters {
+    choice(name: 'target', choices: ['both', 'user', 'admin'], description: '部署目标（both=两端 / user=仅用户端 / admin=仅管理端），不改就是 both')
+  }
+
+  stages {
+    stage('Resolve') {
+      steps {
+        script {
+          Map job = longzhuResolveJob(operation: 'deploy')
+          env.LZ_ENV = job.environment
+          env.LZ_PRODUCT = job.product
+        }
+      }
+    }
+
+    stage('Deploy user') {
+      when { expression { params.target in ['both', 'user'] } }
+      steps {
+        longzhuDeploy(product: env.LZ_PRODUCT, end: 'user', environment: env.LZ_ENV)
+      }
+    }
+
+    stage('Deploy admin') {
+      when { expression { params.target in ['both', 'admin'] } }
+      steps {
+        longzhuDeploy(product: env.LZ_PRODUCT, end: 'admin', environment: env.LZ_ENV)
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "部署成功：${env.LZ_PRODUCT} environment=${env.LZ_ENV} target=${params.target}"
+    }
+    failure {
+      echo "部署失败：${env.LZ_PRODUCT} environment=${env.LZ_ENV} target=${params.target}"
+      echo '构建失败时目标机未被改动；健康检查失败时已自动回滚到上一个可用版本。定位原因后再人工重跑。'
+    }
+  }
+}

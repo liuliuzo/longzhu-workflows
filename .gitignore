@@ -1,0 +1,6 @@
+# 本仓是公开仓：口令、主机清单实值一律不入仓。填好的 *.env 只上传为 Jenkins 凭据。
+*.env
+!*.env.example
+.longzhu/
+__pycache__/
+*.pyc

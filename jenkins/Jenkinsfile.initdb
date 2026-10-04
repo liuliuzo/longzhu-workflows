@@ -1,0 +1,42 @@
+// 数据库空库初始化流水线。产品与环境由 Job 内部名决定：
+//   dev-longzhu-init-database → 用 longzhu 仓 develop 的 sql/ 初始化开发库
+//
+// 只接受空库：库里已有表就拒绝，绝不 DROP、绝不覆盖数据。只动数据库，不部署应用。
+// 需要推倒重建时先人工备份、清库（见 README「数据库」一节），再跑本 Job。
+@Library('longzhu') _
+
+pipeline {
+  agent any
+
+  options {
+    skipDefaultCheckout()
+    disableConcurrentBuilds()
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  stages {
+    stage('Resolve') {
+      steps {
+        script {
+          Map job = longzhuResolveJob(operation: 'init-database')
+          env.LZ_ENV = job.environment
+          env.LZ_PRODUCT = job.product
+        }
+      }
+    }
+
+    stage('Init database') {
+      steps {
+        longzhuInitDatabase(product: env.LZ_PRODUCT, environment: env.LZ_ENV)
+      }
+    }
+  }
+
+  post {
+    failure {
+      echo '初始化失败。本 Job 不 DROP、不覆盖；若是「库非空」被拒，说明库里已有数据，先确认是否真要重建。'
+    }
+  }
+}

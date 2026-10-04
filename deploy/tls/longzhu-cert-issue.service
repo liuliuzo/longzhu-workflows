@@ -1,0 +1,12 @@
+# 等域名生效后自动签证书。由 longzhu-cert-issue.timer 定时拉起；签发成功后脚本自己停用 timer。
+# 装到 /etc/systemd/system/，脚本放 /opt/longzhu/lib/issue-certificate.sh。
+[Unit]
+Description=Issue Let's Encrypt certificate for longzhu dev domains once DNS is live
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# 退出码 3 = 域名尚未解析到本机，属于正常等待，不记为失败。
+SuccessExitStatus=3
+ExecStart=/bin/bash /opt/longzhu/lib/issue-certificate.sh dev.admin.bgssai-insurance.com dev.user.bgssai-insurance.com

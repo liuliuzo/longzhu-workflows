@@ -1,0 +1,11 @@
+# 每 30 分钟检查一次域名是否已解析到本机，生效后签证书；签发成功后由脚本停用本 timer。
+[Unit]
+Description=Retry longzhu certificate issuance until DNS is live
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

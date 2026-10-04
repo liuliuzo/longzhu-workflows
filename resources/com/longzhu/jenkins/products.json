@@ -1,0 +1,20 @@
+{
+  "_comment": "产品清单唯一权威。流水线（vars/longzhuProduct.groovy）与 Job 生成器（jenkins/seed/jobs.py）都读这一份，改这里就够了。",
+  "githubOwner": "liuliuzo",
+  "workflowsRepo": "longzhu-workflows",
+  "jenkinsFolder": "longzhu",
+  "products": {
+    "longzhu": {
+      "githubRepo": "longzhu",
+      "modulePrefix": "longzhu",
+      "ends": ["user", "admin"],
+      "environments": ["dev"],
+      "database": true,
+      "packageManager": "npm",
+      "frontendScript": "build:deploy",
+      "appPort": "8080",
+      "healthScheme": "http",
+      "healthPath": "/longzhu/health/readiness"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+// 清库流水线。产品与环境由 Job 内部名决定：
+//   dev-longzhu-clean-database → 删除开发库 longzhu（界面显示 longzhu clean database(dev)）
+//
+// 只执行 DROP DATABASE，不建表、不灌数据、不动应用。只允许 dev。
+// 开发环境全量发布顺序：clean database → init database → deploy。仅手动触发，点 Build 即执行。
+@Library('longzhu') _
+
+pipeline {
+  agent any
+
+  options {
+    skipDefaultCheckout()
+    disableConcurrentBuilds()
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    timeout(time: 15, unit: 'MINUTES')
+  }
+
+  stages {
+    stage('Resolve') {
+      steps {
+        script {
+          Map job = longzhuResolveJob(operation: 'clean-database')
+          env.LZ_ENV = job.environment
+          env.LZ_PRODUCT = job.product
+        }
+      }
+    }
+
+    stage('Clean database') {
+      steps {
+        longzhuCleanDatabase(product: env.LZ_PRODUCT, environment: env.LZ_ENV)
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "清库完成：${env.LZ_PRODUCT} environment=${env.LZ_ENV}。下一步跑 init database。"
+    }
+    failure {
+      echo '清库失败。本 Job 只执行 DROP DATABASE，未动任何应用。'
+    }
+  }
+}
