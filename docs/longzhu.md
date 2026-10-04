@@ -5,6 +5,7 @@
 ## 应用形态
 
 - 两端：用户端 `user`、管理端 `admin`，都是 Spring Boot fat jar，前端构建产物打进 jar。
+- 用户端 `dev.user.bgssai-insurance.com` 当前根路径是龙珠小程序静态 HTML 演示（`/mp/index.html`），页内可点选身份、业务员登录、首页和我的，不接业务接口。
 - 代码仓 `liuliuzo/longzhu`（私有），发布分支 `develop`（dev 与 prod 都发 develop，只换 `application-<profile>.properties`）。
 - 模块前缀 `longzhu`（`longzhu-user/longzhu-user`、`longzhu-admin/longzhu-admin-react` 等），接口前缀 `/longzhu`，健康检查 `/longzhu/health/readiness`，库名 `longzhu`。
 - 数据源、JWT 等中间件参数按产品线口径写在应用仓 `application-dev.properties`，目标机不需要额外的 env 文件。

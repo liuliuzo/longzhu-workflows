@@ -385,4 +385,4 @@ echo "  pnpm  : $(pnpm --version 2>/dev/null || echo '未安装')"
 echo "  maven : $(maven_version_line)"
 echo "  git   : $(git --version)"
 echo
-echo "[provision] 下一步：把运行时口令写进 /etc/longzhu/longzhu-<产品>-<端>.env（0600），再在 Jenkins 上跑 longzhu/<env>-<产品>-deploy。"
+echo "[provision] 下一步：配 Nginx 与证书（见 docs/longzhu.md），再在 Jenkins 文件夹 longzhu 依次跑 clean database → init database → deploy。"
