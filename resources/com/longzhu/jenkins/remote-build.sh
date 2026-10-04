@@ -24,6 +24,8 @@
 #   LZ_MAVEN_OPTS / LZ_NODE_OPTIONS   追加到 MAVEN_OPTS / NODE_OPTIONS（小内存机用）
 #   LZ_MAVEN_MIRROR_URL       Maven 镜像，默认华为云；填 none 则不用镜像
 #   LZ_KEEP_RELEASES          releases/ 保留的历史版本数，透传给 remote-deploy.sh
+#   LZ_GIT_FETCH_ATTEMPTS     git fetch 尝试次数，默认 5；0 = 不走 git，直接用 GitHub API + codeload tarball
+#                             （境内机连 github.com 的 git 通道常年超时、API 与 codeload 却很快时用）
 #   APP_BIND_ADDRESS HEALTH_PATH HEALTH_SCHEME HEALTH_TIMEOUT_SECONDS RESTART_CMD  透传给 remote-deploy.sh
 #   GIT_TOKEN           GitHub PAT。随 stdin 进来，只经 git credential helper 交给本次进程，
 #                       不进 argv、不写进 .git/config
@@ -50,6 +52,7 @@ LZ_BUILD_TIMEOUT_SECONDS="${LZ_BUILD_TIMEOUT_SECONDS:-2700}"
 LZ_BUILD_SKIP_TESTS="${LZ_BUILD_SKIP_TESTS:-0}"
 LZ_MIN_FREE_MB="${LZ_MIN_FREE_MB:-5120}"
 LZ_MAVEN_MIRROR_URL="${LZ_MAVEN_MIRROR_URL:-https://mirrors.huaweicloud.com/repository/maven/}"
+LZ_GIT_FETCH_ATTEMPTS="${LZ_GIT_FETCH_ATTEMPTS:-5}"
 
 log() { printf '[remote-build][%s] %s\n' "${APP_NAME}" "$*"; }
 die() { log "ERROR: $*"; exit 1; }
@@ -59,7 +62,7 @@ die() { log "ERROR: $*"; exit 1; }
   || die "LZ_PACKAGE_MANAGER 必须是 npm 或 pnpm（当前 '${LZ_PACKAGE_MANAGER}'）"
 [[ "${LZ_BUILD_SKIP_TESTS}" == "0" || "${LZ_BUILD_SKIP_TESTS}" == "1" ]] \
   || die "LZ_BUILD_SKIP_TESTS 必须是 0 或 1（当前 '${LZ_BUILD_SKIP_TESTS}'）"
-for numeric_var in LZ_BUILD_TIMEOUT_SECONDS LZ_MIN_FREE_MB; do
+for numeric_var in LZ_BUILD_TIMEOUT_SECONDS LZ_MIN_FREE_MB LZ_GIT_FETCH_ATTEMPTS; do
   [[ "${!numeric_var}" =~ ^[0-9]+$ ]] || die "${numeric_var} 必须是非负整数（当前 '${!numeric_var}'）"
 done
 (( LZ_BUILD_TIMEOUT_SECONDS > 0 )) || die 'LZ_BUILD_TIMEOUT_SECONDS 必须为正整数'
@@ -83,6 +86,7 @@ if [[ -n "${LZ_REMOTE_BUILD_PRINT_PLAN:-}" ]]; then
   printf 'mvn_args=%s\n' "${MVN_ARGS[*]}"
   printf 'package_manager=%s frontend_script=%s\n' "${LZ_PACKAGE_MANAGER}" "${LZ_FRONTEND_SCRIPT}"
   printf 'build_timeout=%ss min_free_mb=%s maven_mirror=%s\n' "${LZ_BUILD_TIMEOUT_SECONDS}" "${LZ_MIN_FREE_MB}" "${LZ_MAVEN_MIRROR_URL}"
+  printf 'git_fetch_attempts=%s\n' "${LZ_GIT_FETCH_ATTEMPTS}"
   printf 'app_dir=%s service=%s remote_deploy=%s\n' "${APP_DIR}" "${SERVICE_NAME}" "${LZ_REMOTE_DEPLOY:-<unset>}"
   exit 0
 fi
@@ -161,10 +165,10 @@ fi
 git_in "${SRC_DIR}" remote set-url origin "${GIT_URL}"
 
 log "同步 ${LZ_GITHUB_OWNER}/${LZ_GITHUB_REPO}@${LZ_SOURCE_REF} -> ${SRC_DIR}"
-# 境内机访问 github.com 偶发超时 / 重置，多试几次并拉长退避。
-FETCH_MAX_ATTEMPTS=5
+# 境内机访问 github.com 偶发超时 / 重置，多试几次并拉长退避；主机清单设 0 则直接走 tarball。
+FETCH_MAX_ATTEMPTS="${LZ_GIT_FETCH_ATTEMPTS}"
 fetch_ok=false
-for attempt in 1 2 3 4 5; do
+for (( attempt = 1; attempt <= FETCH_MAX_ATTEMPTS; attempt++ )); do
   if git_authed_in "${SRC_DIR}" fetch --depth 1 --no-tags --prune origin "${LZ_SOURCE_REF}" </dev/null; then
     fetch_ok=true
     break
@@ -184,7 +188,11 @@ if [[ "${fetch_ok}" == "true" ]]; then
   log "checked out ${LZ_SOURCE_REF} @ ${BUILD_ID}"
 else
   # git 协议挂了但 REST / codeload 往往还通：走 tarball 兜底。令牌只走 Authorization 头。
-  log "WARNING: git fetch 连续 ${FETCH_MAX_ATTEMPTS} 次失败，改用 GitHub API / codeload tarball 兜底"
+  if (( FETCH_MAX_ATTEMPTS == 0 )); then
+    log "主机清单设定不走 git（_GIT_FETCH_ATTEMPTS=0），直接用 GitHub API / codeload tarball"
+  else
+    log "WARNING: git fetch 连续 ${FETCH_MAX_ATTEMPTS} 次失败，改用 GitHub API / codeload tarball 兜底"
+  fi
   command -v curl >/dev/null 2>&1 || die '本机没有 curl，无法走 tarball 兜底。远端未被改动。'
   API_JSON="$(curl -fsSL --connect-timeout 20 --max-time 120 \
       -H "Authorization: Bearer ${GIT_TOKEN}" -H 'Accept: application/vnd.github+json' \

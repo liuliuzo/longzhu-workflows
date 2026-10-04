@@ -18,6 +18,8 @@ grep -qx 'src_dir=/opt/longzhu/src/longzhu module=longzhu-user/longzhu-user reac
 # 缺省跑测试：mvn 参数里不能有 -DskipTests。
 grep -qx 'mvn_args=-pl longzhu-user/longzhu-user -am' <<<"${out}"
 grep -q 'maven_mirror=https://mirrors.huaweicloud.com/repository/maven/' <<<"${out}"
+grep -qx 'git_fetch_attempts=5' <<<"${out}"
+grep -qx 'git_fetch_attempts=0' <<<"$(plan user LZ_GIT_FETCH_ATTEMPTS=0)"
 
 out="$(plan admin LZ_BUILD_SKIP_TESTS=1 LZ_MAVEN_MIRROR_URL=none)"
 grep -qx 'mvn_args=-pl longzhu-admin/longzhu-admin -am -DskipTests' <<<"${out}"
@@ -25,6 +27,7 @@ grep -q 'maven_mirror=none' <<<"${out}"
 
 # 非法参数必须失败。
 if plan user LZ_BUILD_SKIP_TESTS=yes >/dev/null 2>&1; then echo 'LZ_BUILD_SKIP_TESTS=yes 应当被拒绝' >&2; exit 1; fi
+if plan user LZ_GIT_FETCH_ATTEMPTS=-1 >/dev/null 2>&1; then echo 'LZ_GIT_FETCH_ATTEMPTS=-1 应当被拒绝' >&2; exit 1; fi
 if plan other >/dev/null 2>&1; then echo 'LZ_END=other 应当被拒绝' >&2; exit 1; fi
 if plan user LZ_PACKAGE_MANAGER=yarn >/dev/null 2>&1; then echo 'yarn 应当被拒绝' >&2; exit 1; fi
 

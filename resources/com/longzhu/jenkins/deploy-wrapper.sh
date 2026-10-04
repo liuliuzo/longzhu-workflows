@@ -23,7 +23,7 @@
 #   <KEY>_BIND_ADDRESS <KEY>_HEALTH_PATH <KEY>_HEALTH_SCHEME <KEY>_HEALTH_TIMEOUT_SECONDS
 #   <KEY>_RESTART_CMD <KEY>_NET_MAX_ATTEMPTS <KEY>_SRC_ROOT <KEY>_BUILD_TIMEOUT_SECONDS
 #   <KEY>_BUILD_SKIP_TESTS <KEY>_MIN_FREE_MB <KEY>_MAVEN_OPTS <KEY>_NODE_OPTIONS
-#   <KEY>_MAVEN_MIRROR_URL <KEY>_KEEP_RELEASES
+#   <KEY>_MAVEN_MIRROR_URL <KEY>_KEEP_RELEASES <KEY>_GIT_FETCH_ATTEMPTS
 set -euo pipefail
 # 绝不开 xtrace：SSHPASS / GIT_TOKEN 就在环境里。
 set +x
@@ -242,6 +242,7 @@ append_opt LZ_MAVEN_OPTS "$(lookup MAVEN_OPTS '')"
 append_opt LZ_NODE_OPTIONS "$(lookup NODE_OPTIONS '')"
 append_opt LZ_MAVEN_MIRROR_URL "$(lookup MAVEN_MIRROR_URL '')"
 append_opt LZ_KEEP_RELEASES "$(lookup KEEP_RELEASES '')"
+append_opt LZ_GIT_FETCH_ATTEMPTS "$(lookup GIT_FETCH_ATTEMPTS '')"
 
 echo "[wrapper] ${LZ_GITHUB_REPO}@${LZ_SOURCE_REF} 将在 ${SSH_HOST} 上就地构建并部署"
 # GIT_TOKEN 随 stdin 里的脚本文本进入远端 bash，不进 ssh 命令串（命令串会成为目标机上 ps 可见的 argv）。
