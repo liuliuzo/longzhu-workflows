@@ -25,7 +25,8 @@
 - 公网只需开 80（证书就绪后加 443），由 Nginx 按域名转发到本机两个端口，配置见 `deploy/nginx/longzhu-dev.conf`。
 - 源码缓存 `/opt/longzhu/src/longzhu`，两端共用，构建时加锁排队。
 - 应用日志 `/opt/longzhu/log`（应用 properties 的 `logging.applog.path`）。
-- 机器只有 2 GB 内存：装机时加了 4 GB 交换分区；主机清单给两端设了 `MAVEN_OPTS=-Xmx768m`、`NODE_OPTIONS=--max-old-space-size=1024`。
+- 目标机连 github.com 的 git 通道常年超时，GitHub API 与 codeload 很快：主机清单设 `LONGZHU_<端>_GIT_FETCH_ATTEMPTS=0`，构建直接下 tarball。
+- 机器原为 2 GB 内存（2026-10-04 已升到 4 GB）：装机时加了 4 GB 交换分区；主机清单给两端设了 `MAVEN_OPTS=-Xmx768m`、`NODE_OPTIONS=--max-old-space-size=1024`。
 
 ## 域名与解析
 
