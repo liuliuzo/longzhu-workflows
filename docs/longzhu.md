@@ -22,17 +22,17 @@
 | 监听 | `8081`（启动参数 `--server.port`） | `8080` |
 
 - 产品线约定应用端口一律 8080；同机跑两端时用启动参数把用户端错开到 8081，不写进 properties。端口来自主机清单 `LONGZHU_<端>_PORT`，部署脚本写进 systemd 单元的 `--server.port`。
-- 公网只需开 80（证书就绪后加 443），由 Nginx 按域名转发到本机两个端口，配置见 `deploy/nginx/longzhu-dev.conf`。
+- 公网开 80 与 443，由 Nginx 按域名转发到本机两个端口，配置见 `deploy/nginx/longzhu-dev.conf`。
 - 源码缓存 `/opt/longzhu/src/longzhu`，两端共用，构建时加锁排队。
 - 应用日志 `/opt/longzhu/log`（应用 properties 的 `logging.applog.path`）。
 - 目标机连 github.com 的 git 通道常年超时，GitHub API 与 codeload 很快：主机清单设 `LONGZHU_<端>_GIT_FETCH_ATTEMPTS=0`，构建直接下 tarball。
-- 机器原为 2 GB 内存（2026-10-04 已升到 4 GB）：装机时加了 4 GB 交换分区；主机清单给两端设了 `MAVEN_OPTS=-Xmx768m`、`NODE_OPTIONS=--max-old-space-size=1024`。
+- 开发机在境外机房（2026-10-04 迁移，见下节原因），约 4 GB 内存，装机时加了 4 GB 交换分区；主机清单给两端设了 `MAVEN_OPTS=-Xmx768m`、`NODE_OPTIONS=--max-old-space-size=1024`。
 
 ## 域名与解析
 
 - 解析区域 `bgssai-insurance.com` 在华为云 DNS（bgssai 云账号），已加两条 A 记录 `dev.user` / `dev.admin` 指向目标机公网地址。
-- 域名 2026-10-04 刚注册，注册局状态为 `serverHold`（等实名认证）。解除前公网解析不到，Nginx 按域名转发也就访问不到；可以先在本机用 `curl -H 'Host: dev.admin.bgssai-insurance.com' http://<目标机>/` 验证。
-- HTTPS：目标机用 certbot（nginx 插件，HTTP-01）签 Let's Encrypt 证书，不需要云账号密钥；签好后 certbot 自动给 Nginx 加 443 并把 80 跳 443，续期由 `certbot.timer` 负责。
+- 域名没有做 ICP 备案。中国大陆机房会在 80 / 443 上拦截未备案域名（返回连接重置或拦截页），所以开发机必须放在境外机房；换机器时先确认这一点。
+- HTTPS：目标机用 certbot（nginx 插件，HTTP-01）签 Let's Encrypt 证书，不需要云账号密钥；签好后 certbot 自动给 Nginx 加 443 并把 80 跳 443，续期由 `certbot.timer` 负责。当前两个域名的证书已签发。
 - 自动签发：`deploy/tls/issue-certificate.sh` 装在 `/opt/longzhu/lib/`，由 `longzhu-cert-issue.timer` 每 30 分钟检查一次。两个域名都解析到本机之前它只做只读预检、不调用 certbot；生效后签发并停用该 timer。手动立即执行：`systemctl start longzhu-cert-issue.service`，看结果：`journalctl -u longzhu-cert-issue.service`。
 - 公网安全组需放行 80 与 443（HTTP-01 验证走 80）。
 
